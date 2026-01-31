@@ -1,0 +1,19 @@
+# Compiled executables
+*.exe
+
+# Build artifacts
+*.o
+*.obj
+app_res.o
+
+# Config file (user-specific)
+config.ini
+
+# Temporary files
+*.tmp
+*.log
+*~
+
+# Windows cache
+Thumbs.db
+desktop.ini
