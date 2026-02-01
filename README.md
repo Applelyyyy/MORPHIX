@@ -11,17 +11,13 @@ A lightweight, fast Windows application for quick resolution switching with hotk
 - **Auto Highest Refresh Rate** - Automatically uses the highest available Hz for each resolution
 - **Multi-Monitor Support** - Configure different settings for each monitor
 - **System Tray Integration** - Runs quietly in the background
-- **Quick Reset** - Return to default resolution with Ctrl+Alt+Shift+R
-- **Dark Modern UI** - Clean, minimal interface
-
 ---
 
 ## 📋 Quick Start
 
 ### Installation
-1. Extract all files to a folder (e.g., `C:\Program Files\MORPHIX\`)
+1. Download the latest release from [GitHub Releases](https://github.com/Applelyyyy/MORPHIX/releases)
 2. Run `MORPHIX.exe`
-3. The app will minimize to system tray
 
 ### First Time Setup
 1. **Select Monitor** - Choose which display to control
