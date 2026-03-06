@@ -29,6 +29,7 @@ static inline void NoTheme(HWND h) { SetWindowTheme(h, L"", L""); }
 #include <string>
 #include <vector>
 #include <map>
+#include <set>
 #include <algorithm>
 #include <stdio.h>
 #include <cmath>
@@ -98,9 +99,15 @@ HWND hSubtitleLabel  = NULL;
 // Active preset tracking (0=none, 1=game/preset1, 2=normal/preset2)
 int g_activePreset = 0;
 
+// Per-combo set of resolution strings that failed CDS_TEST
+std::map<HWND, std::set<std::string>> g_incompatRes;
+
 int currentHz = 0;
 char configFile[MAX_PATH];
 int originalWidth = 0, originalHeight = 0, originalHz = 0;
+
+// Revert-after-change state
+#define ID_TRAY_RESET 1004
 
 // Forward declarations
 void SaveConfig();
@@ -339,12 +346,33 @@ void PopulateResolutions(HWND hCombo, int monitorIndex) {
     
     // Sort by resolution (largest first)
     std::sort(resolutions.rbegin(), resolutions.rend());
-    
-    // Add sorted resolutions to combobox (showing just resolution, but we know max Hz)
+
+    // Reset compatibility set for this combo
+    g_incompatRes[hCombo].clear();
+
+    // Test each resolution via CDS_TEST and add to combobox
     for (const auto& res : resolutions) {
+        int rw = 0, rh = 0;
+        sscanf(res.second.c_str(), "%dx%d", &rw, &rh);
+        int hz = resolutionMaxHz[res.second];
+
+        // Test with width+height only — no forced Hz/bpp so valid modes like 1080x1080
+        // aren't falsely rejected by the driver's strict frequency matching
+        DEVMODE dmTest;
+        ZeroMemory(&dmTest, sizeof(dmTest));
+        dmTest.dmSize      = sizeof(dmTest);
+        dmTest.dmPelsWidth  = rw;
+        dmTest.dmPelsHeight = rh;
+        dmTest.dmFields     = DM_PELSWIDTH | DM_PELSHEIGHT;
+
+        LONG compat = ChangeDisplaySettingsEx(
+            monitors[monitorIndex].DeviceName, &dmTest, NULL, CDS_TEST, NULL);
+        if (compat != DISP_CHANGE_SUCCESSFUL) {
+            g_incompatRes[hCombo].insert(res.second);
+        }
         SendMessage(hCombo, CB_ADDSTRING, 0, (LPARAM)res.second.c_str());
     }
-    
+
     SendMessage(hCombo, CB_SETCURSEL, 0, 0);
     DebugLog("Populated %d unique resolutions with auto highest Hz", resolutions.size());
 }
@@ -931,7 +959,13 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             if (dis->itemID != (UINT)-1) {
                 char text[256] = {0};
                 SendMessageA(dis->hwndItem, CB_GETLBTEXT, dis->itemID, (LPARAM)text);
-                SetTextColor(hdc, selected ? RGB(255,255,255) : COL_TEXT);
+                bool incompat = g_incompatRes.count(dis->hwndItem) &&
+                                g_incompatRes[dis->hwndItem].count(std::string(text)) > 0;
+                COLORREF textCol;
+                if (selected)       textCol = RGB(255, 255, 255);
+                else if (incompat)  textCol = RGB(220, 80,  80);   // red — incompatible
+                else                textCol = COL_GREEN;            // green — compatible
+                SetTextColor(hdc, textCol);
                 SetBkMode(hdc, TRANSPARENT);
                 HFONT hf = (HFONT)SendMessage(dis->hwndItem, WM_GETFONT, 0, 0);
                 HFONT hfOld = hf ? (HFONT)SelectObject(hdc, hf) : NULL;
@@ -989,6 +1023,25 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             DebugLog("USER ACTION: Applied hotkeys and saved configuration");
             MessageBoxA(hwnd, "Configuration saved and applied!", "MORPHIX", MB_ICONINFORMATION);
         }
+        // Warn when an incompatible resolution is selected
+        if ((LOWORD(wParam) == IDC_COMBO_RES_GAME || LOWORD(wParam) == IDC_COMBO_RES_NORMAL)
+            && HIWORD(wParam) == CBN_SELCHANGE) {
+            HWND hSel = (HWND)lParam;
+            int selIdx = SendMessage(hSel, CB_GETCURSEL, 0, 0);
+            if (selIdx != CB_ERR) {
+                char selText[64] = {0};
+                SendMessageA(hSel, CB_GETLBTEXT, selIdx, (LPARAM)selText);
+                if (g_incompatRes.count(hSel) &&
+                    g_incompatRes[hSel].count(std::string(selText)) > 0) {
+                    MessageBoxA(hwnd,
+                        "This resolution was reported incompatible by your display driver.\n"
+                        "Applying it may result in a blank screen or display error.\n\n"
+                        "Proceed with caution.",
+                        "MORPHIX  —  Incompatible Resolution",
+                        MB_ICONWARNING | MB_OK);
+                }
+            }
+        }
         if (LOWORD(wParam) == IDC_COMBO_MONITOR && HIWORD(wParam) == CBN_SELCHANGE) {
             int idx = SendMessage(hComboMon, CB_GETCURSEL, 0, 0);
             PopulateResolutions(hComboResGame, idx);
@@ -1022,11 +1075,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         }
         else if (wParam == HOTKEY_RESET) {
             DebugLog("Reset hotkey activated - resetting to %dx%d", originalWidth, originalHeight);
-            // Reset to original default resolution
             if (originalWidth > 0 && originalHeight > 0) {
                 ChangeRes(originalWidth, originalHeight, monIdx);
-            } else {
-                DebugLog("ERROR: No original resolution stored");
+                g_activePreset = 0;
+                InvalidateRect(hwnd, NULL, FALSE);
             }
             return 0;
         }
@@ -1045,11 +1097,21 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             GetCursorPos(&curPoint);
             HMENU hMenu = CreatePopupMenu();
             AppendMenuA(hMenu, MF_STRING, ID_TRAY_SHOW, "Show Settings");
+            AppendMenuA(hMenu, MF_STRING, ID_TRAY_RESET, "Reset to Default");
+            AppendMenuA(hMenu, MF_SEPARATOR, 0, NULL);
             AppendMenuA(hMenu, MF_STRING, ID_TRAY_EXIT, "Exit");
             SetForegroundWindow(hwnd);
             int selection = TrackPopupMenu(hMenu, TPM_RETURNCMD | TPM_NONOTIFY, curPoint.x, curPoint.y, 0, hwnd, NULL);
-            if (selection == ID_TRAY_EXIT) PostQuitMessage(0);
-            if (selection == ID_TRAY_SHOW) ShowWindow(hwnd, SW_SHOW);
+            if (selection == ID_TRAY_EXIT)  PostQuitMessage(0);
+            if (selection == ID_TRAY_SHOW)  { ShowWindow(hwnd, SW_SHOW); SetForegroundWindow(hwnd); }
+            if (selection == ID_TRAY_RESET) {
+                int monIdx2 = SendMessage(hComboMon, CB_GETCURSEL, 0, 0);
+                if (originalWidth > 0 && originalHeight > 0) {
+                    ChangeRes(originalWidth, originalHeight, monIdx2);
+                    g_activePreset = 0;
+                    InvalidateRect(hwnd, NULL, FALSE);
+                }
+            }
             DestroyMenu(hMenu);
         }
         else if (lParam == WM_LBUTTONDBLCLK) {
