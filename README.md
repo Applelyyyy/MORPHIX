@@ -1,45 +1,48 @@
-# MORPHIX - Resolution Changer
+# MORPHIX
 
-A lightweight, fast Windows application for quick resolution switching with hotkeys.
-
----
-
-## 🚀 Features
-
-- **Dual Resolution Profiles** - Save two favorite resolutions for instant switching
-- **Global Hotkeys** - Switch resolutions from anywhere (default: F7 & F8)
-- **Auto Highest Refresh Rate** - Automatically uses the highest available Hz for each resolution
-- **Multi-Monitor Support** - Configure different settings for each monitor
-- **System Tray Integration** - Runs quietly in the background
----
-
-## 📋 Quick Start
-
-### Installation
-1. Download the latest release from [GitHub Releases](https://github.com/Applelyyyy/MORPHIX/releases)
-2. Run `MORPHIX.exe`
-
-### First Time Setup
-1. **Select Monitor** - Choose which display to control
-2. **Set Resolution 1** - Pick your first resolution (e.g., gaming resolution)
-3. **Set Resolution 2** - Pick your second resolution (e.g., desktop resolution)
-4. **Configure Hotkeys** - Default F7 and F8, or customize
-5. **Click Apply** to activate hotkeys
-6. **Click Save Config** to remember your settings
+A lightweight Win32 application for instant resolution switching via global hotkeys.
 
 ---
 
-## ⌨️ Default Hotkeys
+## Features
 
-| Hotkey | Action |
-|--------|--------|
-| **F7** | Switch to Resolution 1 |
-| **F8** | Switch to Resolution 2 |
-| **Ctrl+Alt+Shift+R** | Reset to original resolution |
+- **Dual Resolution Presets** — Save two resolutions and switch between them instantly
+- **Global Hotkeys** — Trigger switches from any window, even in fullscreen
+- **Auto Refresh Rate** — Always selects the highest available Hz for each resolution
+- **Multi-Monitor Support** — Per-monitor configuration
+- **System Tray** — Runs silently in the background, out of your way
 
-## 🔧 Configuration
+---
 
-Settings are automatically saved to `config.ini`:
+## Installation
+
+1. Download `MORPHIX.exe` from [Releases](https://github.com/Applelyyyy/MORPHIX/releases)
+2. Run it — no installer needed
+
+---
+
+## Setup
+
+1. Select the target monitor from the dropdown
+2. Set **Preset 1** and **Preset 2** resolutions
+3. Assign hotkeys (default: F7 and F8)
+4. Click **Apply & Save** to register the hotkeys and Save to Config
+
+---
+
+## Hotkeys
+
+| Key | Action |
+|-----|--------|
+| F7 | Switch to Preset 1 |
+| F8 | Switch to Preset 2 |
+| Ctrl + Alt + Shift + R | Reset to original resolution |
+
+---
+
+## Configuration
+
+Settings are saved automatically to `config.ini` next to the executable.
 
 ```ini
 [Settings]
@@ -50,42 +53,24 @@ Hotkey1=118
 Hotkey2=119
 ```
 
-### Changing Hotkeys
-1. Click in the hotkey field
-2. Press your desired key combination
-3. Click **Apply** button
-4. Click **Save Config** to make permanent
+To change hotkeys: click the hotkey field, press a new key, then click **Apply** and **Save**.
 
 ---
 
-## 💡 Tips & Tricks
+## Building from Source
 
-- **System Tray Access**: Double-click tray icon to show window
-- **Quick Exit**: Right-click tray icon → Exit
-- **Auto-Start**: Create a shortcut to MORPHIX.exe in `shell:startup`
-- **Portable**: Copy entire folder to USB drive
-- **Reset If Stuck**: Press Ctrl+Alt+Shift+R to recover
+Requirements: MinGW-w64 (g++), Windows 7 SDK or later
 
----
-
-## 🔨 Building from Source
-
-Requirements:
-- MinGW-w64 (g++)
-- Windows SDK
-
-Build:
 ```cmd
 compile.bat
 ```
 
 ---
 
-## ⚡ Performance
+## Notes
 
-- **Memory**: ~3-5 MB RAM
-- **CPU**: Minimal (idle when not switching)
-- **Startup**: Instant
-- **No Dependencies**: Standalone executable
-
----
+- To run on startup, place a shortcut to `MORPHIX.exe` in `shell:startup`
+- If the display gets stuck, press Ctrl + Alt + Shift + R to recover
+- Right-click the tray icon to exit
+- Memory usage: ~3–5 MB at idle
+- No external dependencies — single standalone executable
