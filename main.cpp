@@ -1150,8 +1150,107 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
+// Ensure JetBrains Mono is loaded — reads from embedded resource,
+// installs to HKCU permanently so it survives reboot (no admin required).
+static bool IsFontInstalled(const char* faceName) {
+    HDC hdc = GetDC(NULL);
+    bool found = false;
+    LOGFONTA lf = {};
+    lf.lfCharSet = DEFAULT_CHARSET;
+    strncpy(lf.lfFaceName, faceName, LF_FACESIZE - 1);
+    struct CB {
+        static int CALLBACK Proc(const LOGFONTA*, const TEXTMETRICA*, DWORD, LPARAM lp) {
+            *(bool*)lp = true; return 0;
+        }
+    };
+    EnumFontFamiliesExA(hdc, &lf, CB::Proc, (LPARAM)&found, 0);
+    ReleaseDC(NULL, hdc);
+    return found;
+}
+
+// Permanently register a font file for the current user (HKCU — no admin)
+static void RegisterFontForUser(const char* fontPath) {
+    AddFontResourceExA(fontPath, 0, NULL);
+    HKEY hKey = NULL;
+    if (RegOpenKeyExA(HKEY_CURRENT_USER,
+            "Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts",
+            0, KEY_SET_VALUE, &hKey) == ERROR_SUCCESS) {
+        RegSetValueExA(hKey, "JetBrains Mono Bold (TrueType)", 0, REG_SZ,
+            (const BYTE*)fontPath, (DWORD)(strlen(fontPath) + 1));
+        RegCloseKey(hKey);
+    }
+}
+
+static void EnsureJetBrainsMono() {
+    // Build preferred install path: %LOCALAPPDATA%\Microsoft\Windows\Fonts\
+    // (writable by current user on Win10+, no admin required)
+    char installDir[MAX_PATH] = {};
+    {
+        char localApp[MAX_PATH] = {};
+        if (GetEnvironmentVariableA("LOCALAPPDATA", localApp, MAX_PATH) > 0) {
+            sprintf(installDir, "%s\\Microsoft\\Windows\\Fonts", localApp);
+            CreateDirectoryA(installDir, NULL); // no-op if already exists
+            if (GetFileAttributesA(installDir) == INVALID_FILE_ATTRIBUTES)
+                installDir[0] = '\0'; // not usable
+        }
+        if (!installDir[0]) {
+            // Fallback: directory of the exe
+            GetModuleFileNameA(NULL, installDir, MAX_PATH);
+            char* sl = strrchr(installDir, '\\'); if (sl) *sl = '\0';
+        }
+    }
+    char installPath[MAX_PATH];
+    sprintf(installPath, "%s\\JetBrainsMono-Bold.ttf", installDir);
+
+    // Try embedded resource first
+    HRSRC hRes = FindResourceA(NULL, MAKEINTRESOURCEA(200), RT_RCDATA);
+    if (!hRes) {
+        // No embedded resource — look for font file next to the exe
+        char exeDir[MAX_PATH] = {};
+        GetModuleFileNameA(NULL, exeDir, MAX_PATH);
+        char* sl = strrchr(exeDir, '\\'); if (sl) *sl = '\0';
+        char diskPath[MAX_PATH];
+        sprintf(diskPath, "%s\\JetBrainsMono-Bold.ttf", exeDir);
+        if (GetFileAttributesA(diskPath) != INVALID_FILE_ATTRIBUTES) {
+            if (!IsFontInstalled("JetBrains Mono"))
+                RegisterFontForUser(diskPath);
+            else
+                AddFontResourceExA(diskPath, 0, NULL);
+        }
+        return;
+    }
+
+    HGLOBAL hGlob = LoadResource(NULL, hRes);
+    if (!hGlob) return;
+    void*  pData = LockResource(hGlob);
+    DWORD  size  = SizeofResource(NULL, hRes);
+    if (!pData || !size) return;
+
+    // Load into current session via memory (instant, no disk I/O)
+    DWORD nFonts = 0;
+    AddFontMemResourceEx(pData, size, NULL, &nFonts);
+
+    // Permanently install if not already present
+    if (!IsFontInstalled("JetBrains Mono")) {
+        // Write TTF to install path if not already there
+        if (GetFileAttributesA(installPath) == INVALID_FILE_ATTRIBUTES) {
+            HANDLE hf = CreateFileA(installPath, GENERIC_WRITE, 0, NULL,
+                CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+            if (hf != INVALID_HANDLE_VALUE) {
+                DWORD written = 0;
+                WriteFile(hf, pData, size, &written, NULL);
+                CloseHandle(hf);
+            }
+        }
+        RegisterFontForUser(installPath);
+    }
+}
+
 // Application entry point
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    // Ensure JetBrains Mono is available (downloads + installs if missing)
+    EnsureJetBrainsMono();
+
     // Initialize debug console if DEBUG_MODE is enabled
     if (DEBUG_MODE) {
         AllocConsole();
