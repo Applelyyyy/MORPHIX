@@ -1,11 +1,9 @@
-*.exe
+*~
 *.o
+*.db
+*.exe
 *.obj
-app_res.o
-config.ini
 *.tmp
 *.log
-*~
-Thumbs.db
-desktop.ini
+*.ini
 *.ttf
