@@ -30,16 +30,25 @@ void ApplyHotkeys(HWND hwnd) {
     DebugLog("Applying new hotkeys");
     UnregisterHotKey(hwnd, HOTKEY_GAME_MODE);
     UnregisterHotKey(hwnd, HOTKEY_NORMAL_MODE);
+    UnregisterHotKey(hwnd, HOTKEY_COLOR1);
+    UnregisterHotKey(hwnd, HOTKEY_COLOR2);
 
     WORD modGame   = LOWORD(SendMessage(hHotkeyGame,   HKM_GETHOTKEY, 0, 0));
     WORD modNormal = LOWORD(SendMessage(hHotkeyNormal, HKM_GETHOTKEY, 0, 0));
+    WORD modColor1 = LOWORD(SendMessage(hHotkeyColor1, HKM_GETHOTKEY, 0, 0));
+    WORD modColor2 = LOWORD(SendMessage(hHotkeyColor2, HKM_GETHOTKEY, 0, 0));
 
     if (modGame   > 0) gameHotkey   = modGame;
     if (modNormal > 0) normalHotkey = modNormal;
+    if (modColor1 > 0) colorHotkey1 = modColor1;
+    if (modColor2 > 0) colorHotkey2 = modColor2;
 
     RegisterHotKey(hwnd, HOTKEY_GAME_MODE,   MOD_NOREPEAT, gameHotkey);
     RegisterHotKey(hwnd, HOTKEY_NORMAL_MODE, MOD_NOREPEAT, normalHotkey);
-    DebugLog("Hotkeys applied: Game=0x%X, Normal=0x%X", gameHotkey, normalHotkey);
+    RegisterHotKey(hwnd, HOTKEY_COLOR1,      MOD_NOREPEAT, colorHotkey1);
+    RegisterHotKey(hwnd, HOTKEY_COLOR2,      MOD_NOREPEAT, colorHotkey2);
+    DebugLog("Hotkeys applied: Game=0x%X, Normal=0x%X, Color1=0x%X, Color2=0x%X",
+             gameHotkey, normalHotkey, colorHotkey1, colorHotkey2);
 }
 
 // ---- Application entry point ----
@@ -80,10 +89,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
 
     HWND hwnd = CreateWindowA("ACRClass", "MORPHIX",
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
-        CW_USEDEFAULT, CW_USEDEFAULT, 666, 448,
+        CW_USEDEFAULT, CW_USEDEFAULT, 786, 448,
         NULL, NULL, hInstance, NULL);
 
     ShowWindow(hwnd, SW_HIDE);
+    InitNVAPI(); // Load NVAPI for digital vibrance (DVC) support; no-op if unavailable
 
     MSG msg = {};
     while (GetMessage(&msg, NULL, 0, 0)) {

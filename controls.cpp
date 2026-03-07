@@ -68,6 +68,8 @@ LRESULT CALLBACK HotkeySubclassProc(HWND h, UINT msg, WPARAM w, LPARAM l) {
         HWND parent = GetParent(h);
         UnregisterHotKey(parent, HOTKEY_GAME_MODE);
         UnregisterHotKey(parent, HOTKEY_NORMAL_MODE);
+        UnregisterHotKey(parent, HOTKEY_COLOR1);
+        UnregisterHotKey(parent, HOTKEY_COLOR2);
         LRESULT r = CallWindowProcA(g_OldHkProc, h, msg, w, l);
         InvalidateRect(h, NULL, TRUE);
         return r;
@@ -77,6 +79,8 @@ LRESULT CALLBACK HotkeySubclassProc(HWND h, UINT msg, WPARAM w, LPARAM l) {
         HWND parent = GetParent(h);
         RegisterHotKey(parent, HOTKEY_GAME_MODE,   MOD_NOREPEAT, gameHotkey);
         RegisterHotKey(parent, HOTKEY_NORMAL_MODE, MOD_NOREPEAT, normalHotkey);
+        RegisterHotKey(parent, HOTKEY_COLOR1,      MOD_NOREPEAT, colorHotkey1);
+        RegisterHotKey(parent, HOTKEY_COLOR2,      MOD_NOREPEAT, colorHotkey2);
         LRESULT r = CallWindowProcA(g_OldHkProc, h, msg, w, l);
         InvalidateRect(h, NULL, TRUE);
         return r;

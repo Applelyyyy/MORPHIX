@@ -1,5 +1,34 @@
 #include "globals.h"
 
+static void UpdateTabVisibility() {
+    int showDisplay = (g_activeTab == 0) ? SW_SHOW : SW_HIDE;
+    int showColor   = (g_activeTab == 1) ? SW_SHOW : SW_HIDE;
+
+    // Display tab controls
+    ShowWindow(hComboResGame, showDisplay);
+    ShowWindow(hComboResNormal, showDisplay);
+    ShowWindow(hLblRes1, showDisplay);
+    ShowWindow(hLblRes2, showDisplay);
+    ShowWindow(hHotkeyGame,   showDisplay);
+    ShowWindow(hHotkeyNormal, showDisplay);
+    ShowWindow(hLblResHotkey1, showDisplay);
+    ShowWindow(hLblResHotkey2, showDisplay);
+
+    // Color tab controls (vibrance + hotkeys only)
+    ShowWindow(hLblGVibrance,    showColor);
+    ShowWindow(hEditGVibrance,   showColor);
+    ShowWindow(hLblNVibrance,    showColor);
+    ShowWindow(hEditNVibrance,   showColor);
+    ShowWindow(hLblColorHotkey1, showColor);
+    ShowWindow(hLblColorHotkey2, showColor);
+    ShowWindow(hHotkeyColor1,    showColor);
+    ShowWindow(hHotkeyColor2,    showColor);
+
+    // Rename card titles based on active tab
+    SetWindowTextA(hP1Title, g_activeTab == 0 ? "Resolution 1" : "COLOR 1");
+    SetWindowTextA(hP2Title, g_activeTab == 0 ? "Resolution 2" : "COLOR 2");
+}
+
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
 
@@ -24,8 +53,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         hBrushBg     = CreateSolidBrush(COL_BG);
         hBrushPanel  = CreateSolidBrush(COL_PANEL);
         hBrushCtrl   = CreateSolidBrush(COL_CTRL);
-        hBrushDarkBg = hBrushBg;
-        hBrushEditBg = hBrushCtrl;
         hPenAccent   = CreatePen(PS_SOLID, 2, COL_ACCENT2);
         hPenBorder   = CreatePen(PS_SOLID, 1, COL_BORDER2);
         hPenSep      = CreatePen(PS_SOLID, 1, COL_BORDER);
@@ -50,24 +77,34 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         SendMessage(hTitleLabel, WM_SETFONT, (WPARAM)hLargeFont, TRUE);
         NoTheme(hTitleLabel);
 
-        hSubtitleLabel = CreateWindowA("STATIC", "Resolution Manager",
+        hSubtitleLabel = CreateWindowA("STATIC", "Resolution",
             WS_VISIBLE | WS_CHILD | SS_LEFT,
-            21, 38, 260, 14, hwnd, NULL, NULL, NULL);
+            18, 38, 260, 14, hwnd, NULL, NULL, NULL);
         SendMessage(hSubtitleLabel, WM_SETFONT, (WPARAM)hSmallFont, TRUE);
         NoTheme(hSubtitleLabel);
 
         // ==========================================
-        // Monitor section  (y = 68..124)
+        // Sidebar tabs  (x = 0..120, y = 56..H)
+        // ==========================================
+        hBtnTabDisplay = CreateWindowA("BUTTON", "Display",
+            WS_VISIBLE | WS_CHILD | BS_OWNERDRAW,
+            0, 64, 120, 48, hwnd, (HMENU)IDC_BTN_TAB_DISPLAY, NULL, NULL);
+        hBtnTabColor = CreateWindowA("BUTTON", "Color",
+            WS_VISIBLE | WS_CHILD | BS_OWNERDRAW,
+            0, 112, 120, 48, hwnd, (HMENU)IDC_BTN_TAB_COLOR, NULL, NULL);
+
+        // ==========================================
+        // Monitor section  (x=132.., y = 68..124)
         // ==========================================
         HWND hMonLabel = CreateWindowA("STATIC", "DISPLAY",
             WS_VISIBLE | WS_CHILD | SS_LEFT,
-            20, 74, 100, 14, hwnd, NULL, NULL, NULL);
+            140, 74, 100, 14, hwnd, NULL, NULL, NULL);
         SendMessage(hMonLabel, WM_SETFONT, (WPARAM)hSmallFont, TRUE);
         NoTheme(hMonLabel);
 
         hComboMon = CreateWindowA("COMBOBOX", "",
             WS_VISIBLE | WS_CHILD | CBS_DROPDOWNLIST | CBS_OWNERDRAWFIXED | CBS_HASSTRINGS | WS_VSCROLL | WS_TABSTOP,
-            20, 90, 366, 160, hwnd, (HMENU)IDC_COMBO_MONITOR, NULL, NULL);
+            140, 90, 366, 160, hwnd, (HMENU)IDC_COMBO_MONITOR, NULL, NULL);
         SendMessage(hComboMon, WM_SETFONT, (WPARAM)hFont, TRUE);
         NoTheme(hComboMon);
         SubclassCombo(hComboMon);
@@ -82,110 +119,150 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
         hLabelCurrentHz = CreateWindowA("STATIC", "Detecting...",
             WS_VISIBLE | WS_CHILD | SS_RIGHT | SS_CENTERIMAGE,
-            394, 90, 232, 28, hwnd, (HMENU)IDC_LABEL_CURRENT_HZ, NULL, NULL);
+            514, 90, 232, 28, hwnd, (HMENU)IDC_LABEL_CURRENT_HZ, NULL, NULL);
         SendMessage(hLabelCurrentHz, WM_SETFONT, (WPARAM)hTitleFont, TRUE);
         NoTheme(hLabelCurrentHz);
         GetCurrentDisplaySettings(0);
 
         // ==========================================
-        // PRESET 1 card  (x=12..330, y=130..304)
+        // PRESET 1 card  (x=132..450, y=130..304)
         // ==========================================
-        HWND hP1Title = CreateWindowA("STATIC", "PRESET 1",
+        hP1Title = CreateWindowA("STATIC", "Resolution 1",
             WS_VISIBLE | WS_CHILD | SS_LEFT,
-            28, 146, 140, 18, hwnd, NULL, NULL, NULL);
+            148, 146, 200, 18, hwnd, NULL, NULL, NULL);
         SendMessage(hP1Title, WM_SETFONT, (WPARAM)hPresetFont, TRUE);
         NoTheme(hP1Title);
 
-        HWND hR1Label = CreateWindowA("STATIC", "Resolution",
+        hLblRes1 = CreateWindowA("STATIC", "Resolution",
             WS_VISIBLE | WS_CHILD | SS_LEFT,
-            28, 178, 130, 14, hwnd, NULL, NULL, NULL);
-        SendMessage(hR1Label, WM_SETFONT, (WPARAM)hSmallFont, TRUE);
-        NoTheme(hR1Label);
-
-        hComboResGame = CreateWindowA("COMBOBOX", "",
-            WS_VISIBLE | WS_CHILD | CBS_DROPDOWNLIST | CBS_OWNERDRAWFIXED | CBS_HASSTRINGS | WS_VSCROLL | WS_TABSTOP,
-            28, 194, 286, 400, hwnd, (HMENU)IDC_COMBO_RES_GAME, NULL, NULL);
-        SendMessage(hComboResGame, WM_SETFONT, (WPARAM)hFont, TRUE);
-        NoTheme(hComboResGame);
-        SubclassCombo(hComboResGame);
-        PopulateResolutions(hComboResGame, 0);
-
-        HWND hK1Label = CreateWindowA("STATIC", "Hotkey",
-            WS_VISIBLE | WS_CHILD | SS_LEFT,
-            28, 238, 80, 14, hwnd, NULL, NULL, NULL);
-        SendMessage(hK1Label, WM_SETFONT, (WPARAM)hSmallFont, TRUE);
-        NoTheme(hK1Label);
-
-        hHotkeyGame = CreateWindowA(HOTKEY_CLASSA, "",
-            WS_VISIBLE | WS_CHILD | WS_BORDER | WS_TABSTOP,
-            28, 256, 155, 28, hwnd, (HMENU)IDC_HOTKEY_GAME, NULL, NULL);
-        SendMessage(hHotkeyGame, HKM_SETHOTKEY, MAKEWORD(VK_F7, 0), 0);
-        SendMessage(hHotkeyGame, WM_SETFONT, (WPARAM)hFont, TRUE);
-        NoTheme(hHotkeyGame);
-        SubclassHotkey(hHotkeyGame);
-
-        // ==========================================
-        // PRESET 2 card  (x=338..W-12, y=130..304)
-        // ==========================================
-        HWND hP2Title = CreateWindowA("STATIC", "PRESET 2",
-            WS_VISIBLE | WS_CHILD | SS_LEFT,
-            356, 146, 140, 18, hwnd, NULL, NULL, NULL);
-        SendMessage(hP2Title, WM_SETFONT, (WPARAM)hPresetFont, TRUE);
-        NoTheme(hP2Title);
-
-        HWND hR2Label = CreateWindowA("STATIC", "Resolution",
-            WS_VISIBLE | WS_CHILD | SS_LEFT,
-            356, 178, 130, 14, hwnd, NULL, NULL, NULL);
-        SendMessage(hR2Label, WM_SETFONT, (WPARAM)hSmallFont, TRUE);
-        NoTheme(hR2Label);
+            148, 178, 130, 14, hwnd, NULL, NULL, NULL);
+        SendMessage(hLblRes1, WM_SETFONT, (WPARAM)hSmallFont, TRUE);
+        NoTheme(hLblRes1);
 
         hComboResNormal = CreateWindowA("COMBOBOX", "",
             WS_VISIBLE | WS_CHILD | CBS_DROPDOWNLIST | CBS_OWNERDRAWFIXED | CBS_HASSTRINGS | WS_VSCROLL | WS_TABSTOP,
-            356, 194, 286, 400, hwnd, (HMENU)IDC_COMBO_RES_NORMAL, NULL, NULL);
+            148, 194, 286, 400, hwnd, (HMENU)IDC_COMBO_RES_NORMAL, NULL, NULL);
         SendMessage(hComboResNormal, WM_SETFONT, (WPARAM)hFont, TRUE);
         NoTheme(hComboResNormal);
         SubclassCombo(hComboResNormal);
         PopulateResolutions(hComboResNormal, 0);
 
-        HWND hK2Label = CreateWindowA("STATIC", "Hotkey",
+        // Vibrance control (Color tab, card 1)
+        hLblNVibrance = CreateWindowA("STATIC", "Vibrance", WS_CHILD | SS_LEFT, 148, 178, 60, 14, hwnd, NULL, NULL, NULL);
+        SendMessage(hLblNVibrance, WM_SETFONT, (WPARAM)hSmallFont, TRUE); NoTheme(hLblNVibrance);
+        hEditNVibrance = CreateWindowA("EDIT", "50", WS_CHILD | WS_BORDER | ES_NUMBER, 148, 194, 286, 24, hwnd, (HMENU)IDC_EDIT_N_VIBRANCE, NULL, NULL);
+        SendMessage(hEditNVibrance, WM_SETFONT, (WPARAM)hFont, TRUE); NoTheme(hEditNVibrance);
+
+        hLblResHotkey1 = CreateWindowA("STATIC", "Res Hotkey",
             WS_VISIBLE | WS_CHILD | SS_LEFT,
-            356, 238, 80, 14, hwnd, NULL, NULL, NULL);
-        SendMessage(hK2Label, WM_SETFONT, (WPARAM)hSmallFont, TRUE);
-        NoTheme(hK2Label);
+            148, 234, 80, 14, hwnd, NULL, NULL, NULL);
+        SendMessage(hLblResHotkey1, WM_SETFONT, (WPARAM)hSmallFont, TRUE);
+        NoTheme(hLblResHotkey1);
 
         hHotkeyNormal = CreateWindowA(HOTKEY_CLASSA, "",
             WS_VISIBLE | WS_CHILD | WS_BORDER | WS_TABSTOP,
-            356, 256, 155, 28, hwnd, (HMENU)IDC_HOTKEY_NORMAL, NULL, NULL);
+            148, 250, 155, 28, hwnd, (HMENU)IDC_HOTKEY_NORMAL, NULL, NULL);
         SendMessage(hHotkeyNormal, HKM_SETHOTKEY, MAKEWORD(VK_F8, 0), 0);
         SendMessage(hHotkeyNormal, WM_SETFONT, (WPARAM)hFont, TRUE);
         NoTheme(hHotkeyNormal);
         SubclassHotkey(hHotkeyNormal);
+
+        hLblColorHotkey1 = CreateWindowA("STATIC", "Color Hotkey",
+            WS_CHILD | SS_LEFT,
+            148, 234, 80, 14, hwnd, NULL, NULL, NULL);
+        SendMessage(hLblColorHotkey1, WM_SETFONT, (WPARAM)hSmallFont, TRUE);
+        NoTheme(hLblColorHotkey1);
+
+        hHotkeyColor1 = CreateWindowA(HOTKEY_CLASSA, "",
+            WS_CHILD | WS_BORDER | WS_TABSTOP,
+            148, 250, 155, 28, hwnd, (HMENU)IDC_HOTKEY_COLOR1, NULL, NULL);
+        SendMessage(hHotkeyColor1, HKM_SETHOTKEY, MAKEWORD(VK_F11, 0), 0);
+        SendMessage(hHotkeyColor1, WM_SETFONT, (WPARAM)hFont, TRUE);
+        NoTheme(hHotkeyColor1);
+        SubclassHotkey(hHotkeyColor1);
+
+        // ==========================================
+        // PRESET 2 card  (x=458..W-12, y=130..304)
+        // ==========================================
+        hP2Title = CreateWindowA("STATIC", "Resolution 2",
+            WS_VISIBLE | WS_CHILD | SS_LEFT,
+            476, 146, 200, 18, hwnd, NULL, NULL, NULL);
+        SendMessage(hP2Title, WM_SETFONT, (WPARAM)hPresetFont, TRUE);
+        NoTheme(hP2Title);
+
+        hLblRes2 = CreateWindowA("STATIC", "Resolution",
+            WS_VISIBLE | WS_CHILD | SS_LEFT,
+            476, 178, 130, 14, hwnd, NULL, NULL, NULL);
+        SendMessage(hLblRes2, WM_SETFONT, (WPARAM)hSmallFont, TRUE);
+        NoTheme(hLblRes2);
+
+        hComboResGame = CreateWindowA("COMBOBOX", "",
+            WS_VISIBLE | WS_CHILD | CBS_DROPDOWNLIST | CBS_OWNERDRAWFIXED | CBS_HASSTRINGS | WS_VSCROLL | WS_TABSTOP,
+            476, 194, 286, 400, hwnd, (HMENU)IDC_COMBO_RES_GAME, NULL, NULL);
+        SendMessage(hComboResGame, WM_SETFONT, (WPARAM)hFont, TRUE);
+        NoTheme(hComboResGame);
+        SubclassCombo(hComboResGame);
+        PopulateResolutions(hComboResGame, 0);
+
+        // Vibrance control (Color tab, card 2)
+        hLblGVibrance = CreateWindowA("STATIC", "Vibrance", WS_CHILD | SS_LEFT, 476, 178, 60, 14, hwnd, NULL, NULL, NULL);
+        SendMessage(hLblGVibrance, WM_SETFONT, (WPARAM)hSmallFont, TRUE); NoTheme(hLblGVibrance);
+        hEditGVibrance = CreateWindowA("EDIT", "50", WS_CHILD | WS_BORDER | ES_NUMBER, 476, 194, 286, 24, hwnd, (HMENU)IDC_EDIT_G_VIBRANCE, NULL, NULL);
+        SendMessage(hEditGVibrance, WM_SETFONT, (WPARAM)hFont, TRUE); NoTheme(hEditGVibrance);
+
+        hLblResHotkey2 = CreateWindowA("STATIC", "Res Hotkey",
+            WS_VISIBLE | WS_CHILD | SS_LEFT,
+            476, 234, 80, 14, hwnd, NULL, NULL, NULL);
+        SendMessage(hLblResHotkey2, WM_SETFONT, (WPARAM)hSmallFont, TRUE);
+        NoTheme(hLblResHotkey2);
+
+        hHotkeyGame = CreateWindowA(HOTKEY_CLASSA, "",
+            WS_VISIBLE | WS_CHILD | WS_BORDER | WS_TABSTOP,
+            476, 250, 155, 28, hwnd, (HMENU)IDC_HOTKEY_GAME, NULL, NULL);
+        SendMessage(hHotkeyGame, HKM_SETHOTKEY, MAKEWORD(VK_F7, 0), 0);
+        SendMessage(hHotkeyGame, WM_SETFONT, (WPARAM)hFont, TRUE);
+        NoTheme(hHotkeyGame);
+        SubclassHotkey(hHotkeyGame);
+
+        hLblColorHotkey2 = CreateWindowA("STATIC", "Color Hotkey",
+            WS_CHILD | SS_LEFT,
+            476, 234, 80, 14, hwnd, NULL, NULL, NULL);
+        SendMessage(hLblColorHotkey2, WM_SETFONT, (WPARAM)hSmallFont, TRUE);
+        NoTheme(hLblColorHotkey2);
+
+        hHotkeyColor2 = CreateWindowA(HOTKEY_CLASSA, "",
+            WS_CHILD | WS_BORDER | WS_TABSTOP,
+            476, 250, 155, 28, hwnd, (HMENU)IDC_HOTKEY_COLOR2, NULL, NULL);
+        SendMessage(hHotkeyColor2, HKM_SETHOTKEY, MAKEWORD(VK_F12, 0), 0);
+        SendMessage(hHotkeyColor2, WM_SETFONT, (WPARAM)hFont, TRUE);
+        NoTheme(hHotkeyColor2);
+        SubclassHotkey(hHotkeyColor2);
 
         // ==========================================
         // Footer  (y = 310..408)
         // ==========================================
         HWND hInfo1 = CreateWindowA("STATIC", "Auto-selects the highest available refresh rate",
             WS_VISIBLE | WS_CHILD | SS_CENTER,
-            14, 318, 636, 16, hwnd, NULL, NULL, NULL);
+            134, 318, 636, 16, hwnd, NULL, NULL, NULL);
         SendMessage(hInfo1, WM_SETFONT, (WPARAM)hSmallFont, TRUE);
         NoTheme(hInfo1);
 
         HWND hInfo2 = CreateWindowA("STATIC", "Reset to default:  Ctrl + Alt + Shift + R",
             WS_VISIBLE | WS_CHILD | SS_CENTER,
-            14, 338, 636, 16, hwnd, NULL, NULL, NULL);
+            134, 338, 636, 16, hwnd, NULL, NULL, NULL);
         SendMessage(hInfo2, WM_SETFONT, (WPARAM)hSmallULFont, TRUE);
         NoTheme(hInfo2);
 
         HWND hBtnSave = CreateWindowA("BUTTON", "Save && Apply",
             WS_VISIBLE | WS_CHILD | BS_OWNERDRAW | WS_TABSTOP,
-            212, 364, 240, 40, hwnd, (HMENU)IDC_BTN_SAVE, NULL, NULL);
+            332, 364, 240, 40, hwnd, (HMENU)IDC_BTN_SAVE, NULL, NULL);
         SendMessage(hBtnSave, WM_SETFONT, (WPARAM)hTitleFont, TRUE);
         NoTheme(hBtnSave);
 
         // Small "Refresh Res" button — bottom right
         hBtnRefreshRes = CreateWindowA("BUTTON", "",
             WS_VISIBLE | WS_CHILD | BS_OWNERDRAW | WS_TABSTOP,
-            490, 370, 120, 28, hwnd, (HMENU)IDC_BTN_REFRESH_RES, NULL, NULL);
+            610, 370, 120, 28, hwnd, (HMENU)IDC_BTN_REFRESH_RES, NULL, NULL);
         NoTheme(hBtnRefreshRes);
 
         // Tooltip for the refresh button
@@ -204,10 +281,25 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
         RegisterHotKey(hwnd, HOTKEY_GAME_MODE,   MOD_NOREPEAT, VK_F7);
         RegisterHotKey(hwnd, HOTKEY_NORMAL_MODE,  MOD_NOREPEAT, VK_F8);
+        RegisterHotKey(hwnd, HOTKEY_COLOR1,        MOD_NOREPEAT, VK_F11);
+        RegisterHotKey(hwnd, HOTKEY_COLOR2,        MOD_NOREPEAT, VK_F12);
         RegisterHotKey(hwnd, HOTKEY_RESET, MOD_CONTROL | MOD_ALT | MOD_SHIFT | MOD_NOREPEAT, 'R');
 
         InitTray(hwnd);
         LoadConfig();
+        UpdateTabVisibility();
+
+        // Apply saved color settings immediately on startup so the display
+        // reflects the stored vibrance without needing a manual Save & Apply.
+        {
+            int monIdx = (int)SendMessage(hComboMon, CB_GETCURSEL, 0, 0);
+            if (monIdx == CB_ERR) monIdx = 0;
+            ApplyHotkeys(hwnd);
+            if (g_activeColorPreset == 1)
+                ApplyColorSettings(gameVibrance, monIdx);
+            else
+                ApplyColorSettings(normalVibrance, monIdx);
+        }
         break;
     }
 
@@ -231,16 +323,20 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         // Full background
         FillRect(hdc, &rc, hBrushBg);
 
-        // Header bar (y 0..56)
-        RECT rcHdr = {0, 0, W, 56};
+        // Sidebar background
+        RECT rcSide = {0, 64, 120, rc.bottom};
+        FillRect(hdc, &rcSide, hBrushPanel);
+
+        // Header bar (y 0..64)
+        RECT rcHdr = {0, 0, W, 64};
         FillRect(hdc, &rcHdr, hBrushPanel);
         HPEN hOldPen = (HPEN)SelectObject(hdc, hPenAccent);
-        MoveToEx(hdc, 0, 55, NULL); LineTo(hdc, W, 55);
+        MoveToEx(hdc, 0, 63, NULL); LineTo(hdc, W, 63);
 
-        // Monitor card (y 68..124)
-        RECT rcMon = {12, 68, W - 12, 124};
+        // Monitor card (x 132..W-12, y 68..124)
+        RECT rcMon = {132, 68, W - 12, 124};
         FillRect(hdc, &rcMon, hBrushPanel);
-        RECT   rcAccL = {12, 68, 15, 124};
+        RECT   rcAccL = {132, 68, 135, 124};
         FillRect(hdc, &rcAccL, hBrushAccent);
         SelectObject(hdc, hPenBorder);
         HBRUSH hOldBr = (HBRUSH)SelectObject(hdc, GetStockObject(NULL_BRUSH));
@@ -248,37 +344,52 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
         // Thin separator between monitor card and preset cards
         SelectObject(hdc, hPenSep);
-        MoveToEx(hdc, 12, 130, NULL); LineTo(hdc, W - 12, 130);
+        MoveToEx(hdc, 132, 130, NULL); LineTo(hdc, W - 12, 130);
 
-        // PRESET 1 card (x 12..330, y 132..304)
-        RECT rcC1 = {12, 132, 330, 304};
+        // PRESET 1 card (x 132..450, y 132..304)
+        // active state depends on which tab is shown
+        int activeCard = (g_activeTab == 0) ? g_activeResPreset : g_activeColorPreset;
+
+        RECT rcC1 = {132, 132, 450, 304};
         FillRect(hdc, &rcC1, hBrushPanel);
-        RECT   rcAt1 = {12, 132, 330, 135};
-        FillRect(hdc, &rcAt1, g_activePreset == 1 ? hBrushGreen : hBrushAccent);
-        SelectObject(hdc, g_activePreset == 1 ? hPenGreen : hPenBorder);
-        SelectObject(hdc, GetStockObject(NULL_BRUSH));
-        Rectangle(hdc, rcC1.left, rcC1.top, rcC1.right, rcC1.bottom);
-        if (g_activePreset == 1) {
-            RECT rcBot1 = {12, 301, 330, 304};
-            FillRect(hdc, &rcBot1, hBrushGreen);
+        if (activeCard == 2) {
+            // Full green border: top, bottom, left, right strips (3 px each)
+            RECT rcT1 = {132, 132, 450, 135}; FillRect(hdc, &rcT1, hBrushGreen);
+            RECT rcB1 = {132, 301, 450, 304}; FillRect(hdc, &rcB1, hBrushGreen);
+            RECT rcL1 = {132, 132, 135, 304}; FillRect(hdc, &rcL1, hBrushGreen);
+            RECT rcR1 = {447, 132, 450, 304}; FillRect(hdc, &rcR1, hBrushGreen);
+        } else {
+            SelectObject(hdc, hPenBorder);
+            SelectObject(hdc, GetStockObject(NULL_BRUSH));
+            Rectangle(hdc, rcC1.left, rcC1.top, rcC1.right, rcC1.bottom);
+            // Accent top strip drawn AFTER Rectangle so it fully overwrites the top border line
+            RECT rcAt1 = {132, 132, 450, 135};
+            FillRect(hdc, &rcAt1, hBrushAccent);
         }
 
-        // PRESET 2 card (x 338..W-12, y 132..304)
-        RECT rcC2 = {338, 132, W - 12, 304};
+        // PRESET 2 card (x 458..W-12, y 132..304)
+        RECT rcC2 = {458, 132, W - 12, 304};
         FillRect(hdc, &rcC2, hBrushPanel);
-        RECT   rcAt2 = {338, 132, W - 12, 135};
-        FillRect(hdc, &rcAt2, g_activePreset == 2 ? hBrushGreen : hBrushAccent);
-        SelectObject(hdc, g_activePreset == 2 ? hPenGreen : hPenBorder);
-        SelectObject(hdc, GetStockObject(NULL_BRUSH));
-        Rectangle(hdc, rcC2.left, rcC2.top, rcC2.right, rcC2.bottom);
-        if (g_activePreset == 2) {
-            RECT rcBot2 = {338, 301, W - 12, 304};
-            FillRect(hdc, &rcBot2, hBrushGreen);
+        if (activeCard == 1) {
+            RECT rcT2 = {458, 132, W-12, 135}; FillRect(hdc, &rcT2, hBrushGreen);
+            RECT rcB2 = {458, 301, W-12, 304}; FillRect(hdc, &rcB2, hBrushGreen);
+            RECT rcL2 = {458, 132, 461, 304}; FillRect(hdc, &rcL2, hBrushGreen);
+            RECT rcR2 = {W-15, 132, W-12, 304}; FillRect(hdc, &rcR2, hBrushGreen);
+        } else {
+            SelectObject(hdc, hPenBorder);
+            SelectObject(hdc, GetStockObject(NULL_BRUSH));
+            Rectangle(hdc, rcC2.left, rcC2.top, rcC2.right, rcC2.bottom);
+            // Accent top strip drawn AFTER Rectangle so it fully overwrites the top border line
+            RECT rcAt2 = {458, 132, W-12, 135};
+            FillRect(hdc, &rcAt2, hBrushAccent);
         }
 
         // Bottom separator above footer
         SelectObject(hdc, hPenSep);
-        MoveToEx(hdc, 12, 310, NULL); LineTo(hdc, W - 12, 310);
+        MoveToEx(hdc, 132, 310, NULL); LineTo(hdc, W - 12, 310);
+
+        // Draw vertical separator for sidebar
+        MoveToEx(hdc, 120, 64, NULL); LineTo(hdc, 120, rc.bottom);
 
         SelectObject(hdc, hOldPen);
         SelectObject(hdc, hOldBr);
@@ -303,9 +414,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         GetWindowRect(hCtrl, &rcCtrl);
         MapWindowPoints(HWND_DESKTOP, hwnd, (POINT*)&rcCtrl, 2);
 
-        if (rcCtrl.top < 56)                              { SetTextColor(hdc, COL_TEXT2); return (INT_PTR)hBrushPanel; }
-        if (rcCtrl.top >= 56  && rcCtrl.top < 126)        { SetTextColor(hdc, COL_TEXT2); return (INT_PTR)hBrushPanel; }
-        if (rcCtrl.top >= 126 && rcCtrl.top < 306)        { SetTextColor(hdc, COL_TEXT2); return (INT_PTR)hBrushPanel; }
+        if (rcCtrl.top < 306) { SetTextColor(hdc, COL_TEXT2); return (INT_PTR)hBrushPanel; }
         SetTextColor(hdc, COL_TEXT3);
         return (INT_PTR)hBrushBg;
     }
@@ -396,6 +505,31 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             return TRUE;
         }
 
+        // Sidebar Tabs
+        if (dis->CtlID == IDC_BTN_TAB_DISPLAY || dis->CtlID == IDC_BTN_TAB_COLOR) {
+            HDC  hdc      = dis->hDC;
+            RECT rc       = dis->rcItem;
+            bool hotlight = (dis->itemState & ODS_HOTLIGHT) != 0;
+            bool active   = (dis->CtlID == IDC_BTN_TAB_DISPLAY && g_activeTab == 0) ||
+                            (dis->CtlID == IDC_BTN_TAB_COLOR   && g_activeTab == 1);
+
+            FillRect(hdc, &rc, active ? hBrushCtrl : hotlight ? hBrushHotlight : hBrushPanel);
+
+            if (active) {
+                RECT rcActiveInd = {0, 0, 4, rc.bottom};
+                FillRect(hdc, &rcActiveInd, hBrushAccent);
+            }
+
+            SetTextColor(hdc, active ? COL_TEXT : COL_TEXT2);
+            SetBkMode(hdc, TRANSPARENT);
+            HFONT hfOld = (HFONT)SelectObject(hdc, hFont);
+            const char* txt = dis->CtlID == IDC_BTN_TAB_DISPLAY ? "Display" : "Color";
+            rc.left += 20; // Padding
+            DrawTextA(hdc, txt, -1, &rc, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+            SelectObject(hdc, hfOld);
+            return TRUE;
+        }
+
         // Refresh Res ghost button
         if (dis->CtlID == IDC_BTN_REFRESH_RES) {
             HDC  hdc      = dis->hDC;
@@ -426,6 +560,16 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     // WM_COMMAND — button clicks and combo selection changes
     // =========================================================
     case WM_COMMAND:
+        if (LOWORD(wParam) == IDC_BTN_TAB_DISPLAY && g_activeTab != 0) {
+            g_activeTab = 0;
+            UpdateTabVisibility();
+            InvalidateRect(hwnd, NULL, FALSE);
+        }
+        if (LOWORD(wParam) == IDC_BTN_TAB_COLOR && g_activeTab != 1) {
+            g_activeTab = 1;
+            UpdateTabVisibility();
+            InvalidateRect(hwnd, NULL, FALSE);
+        }
         if (LOWORD(wParam) == IDC_BTN_REFRESH_RES) {
             int idx = SendMessage(hComboMon, CB_GETCURSEL, 0, 0);
             if (idx == CB_ERR) idx = 0;
@@ -451,7 +595,14 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         if (LOWORD(wParam) == IDC_BTN_SAVE) {
             ApplyHotkeys(hwnd);
             SaveConfig();
-            DebugLog("USER ACTION: Applied hotkeys and saved configuration");
+            // Immediately apply color settings so the user sees the effect right away
+            int monIdx = (int)SendMessage(hComboMon, CB_GETCURSEL, 0, 0);
+            if (monIdx == CB_ERR) monIdx = 0;
+            if (g_activeColorPreset == 1)
+                ApplyColorSettings(gameVibrance, monIdx);
+            else
+                ApplyColorSettings(normalVibrance, monIdx);
+            DebugLog("USER ACTION: Applied hotkeys, saved config, applied colors");
             MessageBoxA(hwnd, "Configuration saved and applied!", "MORPHIX", MB_ICONINFORMATION);
         }
         // Warn when an incompatible resolution is selected
@@ -491,26 +642,35 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         int  w = 0, h = 0;
         int  monIdx = SendMessage(hComboMon, CB_GETCURSEL, 0, 0);
 
-        static const RECT rcPresets = {12, 132, 654, 304};
         if (wParam == HOTKEY_GAME_MODE) {
             int idx = SendMessage(hComboResGame, CB_GETCURSEL, 0, 0);
             SendMessage(hComboResGame, CB_GETLBTEXT, idx, (LPARAM)buf);
             sscanf(buf, "%dx%d", &w, &h);
-            g_activePreset = 1;
-            InvalidateRect(hwnd, &rcPresets, FALSE);
+            g_activeResPreset = 1;
+            InvalidateRect(hwnd, NULL, FALSE);
         } else if (wParam == HOTKEY_NORMAL_MODE) {
             int idx = SendMessage(hComboResNormal, CB_GETCURSEL, 0, 0);
             SendMessage(hComboResNormal, CB_GETLBTEXT, idx, (LPARAM)buf);
             sscanf(buf, "%dx%d", &w, &h);
-            g_activePreset = 2;
-            InvalidateRect(hwnd, &rcPresets, FALSE);
+            g_activeResPreset = 2;
+            InvalidateRect(hwnd, NULL, FALSE);
         } else if (wParam == HOTKEY_RESET) {
             if (originalWidth > 0 && originalHeight > 0) {
                 ChangeRes(originalWidth, originalHeight, monIdx);
-                g_activePreset = 0;
-                InvalidateRect(hwnd, &rcPresets, FALSE);
+                g_activeResPreset   = 0;
+                g_activeColorPreset = 0;
+                ResetColorSettings(monIdx);
+                InvalidateRect(hwnd, NULL, FALSE);
             }
             return 0;
+        } else if (wParam == HOTKEY_COLOR1) {
+            g_activeColorPreset = 2;
+            ApplyColorSettings(normalVibrance, monIdx);
+            InvalidateRect(hwnd, NULL, FALSE);
+        } else if (wParam == HOTKEY_COLOR2) {
+            g_activeColorPreset = 1;
+            ApplyColorSettings(gameVibrance, monIdx);
+            InvalidateRect(hwnd, NULL, FALSE);
         }
 
         if (w > 0 && h > 0) ChangeRes(w, h, monIdx);
@@ -538,7 +698,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                 int monIdx = SendMessage(hComboMon, CB_GETCURSEL, 0, 0);
                 if (originalWidth > 0 && originalHeight > 0) {
                     ChangeRes(originalWidth, originalHeight, monIdx);
-                    g_activePreset = 0;
+                    g_activeResPreset   = 0;
+                    g_activeColorPreset = 0;
+                    ResetColorSettings(monIdx);
                     InvalidateRect(hwnd, NULL, FALSE);
                 }
             }
@@ -554,6 +716,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     case WM_CLOSE:
         SaveConfig();
         UnregisterHotKey(hwnd, HOTKEY_RESET);
+        UnregisterHotKey(hwnd, HOTKEY_COLOR1);
+        UnregisterHotKey(hwnd, HOTKEY_COLOR2);
         ShowWindow(hwnd, SW_HIDE);
         return 0;
 
@@ -563,9 +727,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     case WM_DESTROY:
         DebugLog("Destroying window and cleaning up");
         Shell_NotifyIcon(NIM_DELETE, &nid);
+        ShutdownNVAPI();
         UnregisterHotKey(hwnd, HOTKEY_GAME_MODE);
         UnregisterHotKey(hwnd, HOTKEY_NORMAL_MODE);
         UnregisterHotKey(hwnd, HOTKEY_RESET);
+        UnregisterHotKey(hwnd, HOTKEY_COLOR1);
+        UnregisterHotKey(hwnd, HOTKEY_COLOR2);
         if (hFont)       DeleteObject(hFont);
         if (hTitleFont)  DeleteObject(hTitleFont);
         if (hSmallFont)  DeleteObject(hSmallFont);

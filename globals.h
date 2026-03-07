@@ -14,6 +14,7 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <unordered_set>
 #include <algorithm>
 #include <stdio.h>
 #include <cmath>
@@ -38,7 +39,6 @@
 #define COL_BORDER      RGB(34,  36,  52)
 #define COL_BORDER2     RGB(52,  54,  72)
 #define COL_GREEN       RGB(52,  211, 153)
-#define COL_HEADER_BG   RGB(15,  15,  20)
 
 // ---- Tray / message IDs ----
 #define ID_TRAY_APP_ICON    1001
@@ -51,42 +51,55 @@
 #define HOTKEY_GAME_MODE    1
 #define HOTKEY_NORMAL_MODE  2
 #define HOTKEY_RESET        3
+#define HOTKEY_COLOR1       4
+#define HOTKEY_COLOR2       5
 
 // ---- Control IDs ----
-#define IDC_BTN_APPLY         2001
-#define IDC_EDIT_W_GAME       2003
-#define IDC_EDIT_H_GAME       2004
-#define IDC_EDIT_W_NORM       2005
-#define IDC_EDIT_H_NORM       2006
 #define IDC_COMBO_MONITOR     2007
 #define IDC_HOTKEY_GAME       2008
 #define IDC_HOTKEY_NORMAL     2009
-#define IDC_BTN_APPLY_HOTKEY  2010
+#define IDC_HOTKEY_COLOR1     2029
+#define IDC_HOTKEY_COLOR2     2030
 #define IDC_COMBO_RES_GAME    2011
 #define IDC_COMBO_RES_NORMAL  2012
 #define IDC_LABEL_CURRENT_HZ  2013
-#define IDC_BTN_APPLY_RES1    2014
-#define IDC_BTN_APPLY_RES2    2015
-#define IDC_BTN_RESET         2016
 #define IDC_BTN_SAVE          2017
 #define IDC_BTN_REFRESH_RES   2018
+#define IDC_BTN_TAB_DISPLAY   2019
+#define IDC_BTN_TAB_COLOR     2020
+#define IDC_EDIT_G_VIBRANCE   2024
+#define IDC_EDIT_N_VIBRANCE   2028
 
 // ---- Strip visual styles so WM_CTLCOLOR* messages are honoured ----
 static inline void NoTheme(HWND h) { SetWindowTheme(h, L"", L""); }
 
 // ---- Global variable declarations ----
 extern NOTIFYICONDATA             nid;
-extern HWND                       hEditW_Game, hEditH_Game, hEditW_Norm, hEditH_Norm;
 extern HWND                       hComboMon;
 extern HWND                       hHotkeyGame, hHotkeyNormal;
+extern HWND                       hHotkeyColor1, hHotkeyColor2;
+extern HWND                       hLblColorHotkey1, hLblColorHotkey2;
 extern HWND                       hComboResGame, hComboResNormal, hLabelCurrentHz;
 extern HWND                       hBtnRefreshRes;
+extern HWND                       hBtnTabDisplay, hBtnTabColor;
+extern HWND                       hEditGVibrance;
+extern HWND                       hEditNVibrance;
+extern HWND                       hLblGVibrance;
+extern HWND                       hLblNVibrance;
+extern HWND                       hP1Title, hP2Title;         // card title statics (renamed per tab)
+extern HWND                       hLblResHotkey1, hLblResHotkey2; // "Res Hotkey" labels (Display tab)
+extern HWND                       hLblRes1, hLblRes2;  // "Resolution" labels (Display tab only)
 extern std::vector<DISPLAY_DEVICE> monitors;
 extern UINT                       gameHotkey;
 extern UINT                       normalHotkey;
+extern UINT                       colorHotkey1;
+extern UINT                       colorHotkey2;
+
+extern int                        gameVibrance;
+extern int                        normalVibrance;
 
 // GDI resources
-extern HBRUSH hBrushDarkBg, hBrushEditBg, hBrushBg, hBrushPanel, hBrushCtrl;
+extern HBRUSH hBrushBg, hBrushPanel, hBrushCtrl;
 extern HPEN   hPenAccent, hPenBorder, hPenSep;
 extern HFONT  hFont, hTitleFont, hSmallFont, hLargeFont, hPresetFont, hSmallULFont;
 
@@ -109,7 +122,9 @@ extern char g_savedRes2[64];
 extern HWND hTitleLabel, hSubtitleLabel;
 
 // Application state
-extern int  g_activePreset;   // 0=none, 1=preset1, 2=preset2
+extern int  g_activeResPreset;   // 0=none, 1=gaming res, 2=normal res   (Display tab)
+extern int  g_activeColorPreset; // 0=none, 1=gaming color, 2=normal color (Color tab)
+extern int  g_activeTab;         // 0=Display, 1=Color
 extern std::map<HWND, std::set<std::string>> g_incompatRes;
 extern int  currentHz;
 extern char configFile[MAX_PATH];
@@ -119,8 +134,6 @@ extern int  originalWidth, originalHeight, originalHz;
 
 // utils.cpp
 void DebugLog(const char* format, ...);
-bool IsRunAsAdmin();
-LRESULT CALLBACK CustomDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 // display.cpp
 void EnumerateMonitors();
@@ -132,6 +145,12 @@ void ChangeRes(int width, int height, int monitorIndex);
 // config.cpp
 void SaveConfig();
 void LoadConfig();
+
+// color.cpp
+void InitNVAPI();
+void ShutdownNVAPI();
+void ApplyColorSettings(int vibrance, int monIdx = -1);
+void ResetColorSettings(int monIdx = -1);
 
 // font.cpp
 void EnsureJetBrainsMono();

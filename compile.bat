@@ -33,9 +33,9 @@ echo [3/4] Compiling with icon and manifest...
 windres app.rc -o app_res.o 2>nul
 if %errorlevel% neq 0 (
     echo Warning: Resource compilation failed, building without icon...
-    g++ main.cpp utils.cpp display.cpp config.cpp font.cpp controls.cpp wndproc.cpp -o MORPHIX.exe -lgdi32 -luser32 -lcomctl32 -luxtheme -mwindows 2>nul
+    g++ main.cpp utils.cpp display.cpp config.cpp font.cpp controls.cpp wndproc.cpp color.cpp -O2 -o MORPHIX.exe -lgdi32 -luser32 -lcomctl32 -luxtheme -mwindows 2>nul
 ) else (
-    g++ main.cpp utils.cpp display.cpp config.cpp font.cpp controls.cpp wndproc.cpp app_res.o -o MORPHIX.exe -lgdi32 -luser32 -lcomctl32 -luxtheme -mwindows 2>nul
+    g++ main.cpp utils.cpp display.cpp config.cpp font.cpp controls.cpp wndproc.cpp color.cpp app_res.o -O2 -o MORPHIX.exe -lgdi32 -luser32 -lcomctl32 -luxtheme -mwindows 2>nul
     del app_res.o 2>nul
 )
 

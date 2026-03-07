@@ -3,17 +3,32 @@
 // ---- Global variable definitions ----
 
 NOTIFYICONDATA              nid;
-HWND                        hEditW_Game, hEditH_Game, hEditW_Norm, hEditH_Norm;
 HWND                        hComboMon;
 HWND                        hHotkeyGame, hHotkeyNormal;
+HWND                        hHotkeyColor1    = NULL;
+HWND                        hHotkeyColor2    = NULL;
+HWND                        hLblColorHotkey1 = NULL;
+HWND                        hLblColorHotkey2 = NULL;
 HWND                        hComboResGame, hComboResNormal, hLabelCurrentHz;
 HWND                        hBtnRefreshRes = NULL;
+HWND                        hBtnTabDisplay = NULL, hBtnTabColor = NULL;
+HWND                        hEditGVibrance = NULL;
+HWND                        hEditNVibrance = NULL;
+HWND                        hLblGVibrance = NULL;
+HWND                        hLblNVibrance = NULL;
+HWND                        hP1Title       = NULL;
+HWND                        hP2Title       = NULL;
+HWND                        hLblResHotkey1 = NULL;
+HWND                        hLblResHotkey2 = NULL;
 std::vector<DISPLAY_DEVICE> monitors;
 UINT                        gameHotkey  = VK_F7;
 UINT                        normalHotkey = VK_F8;
+UINT                        colorHotkey1 = VK_F11;
+UINT                        colorHotkey2 = VK_F12;
 
-HBRUSH hBrushDarkBg = NULL;
-HBRUSH hBrushEditBg = NULL;
+int                         gameVibrance   = 50;
+int                         normalVibrance   = 50;
+
 HBRUSH hBrushBg     = NULL;
 HBRUSH hBrushPanel  = NULL;
 HBRUSH hBrushCtrl   = NULL;
@@ -44,8 +59,12 @@ char   g_savedRes2[64] = {};
 
 HWND hTitleLabel    = NULL;
 HWND hSubtitleLabel = NULL;
+HWND hLblRes1       = NULL;   // "Resolution" label - Preset 1 card (Display tab)
+HWND hLblRes2       = NULL;   // "Resolution" label - Preset 2 card (Display tab)
 
-int  g_activePreset = 0;
+int  g_activeResPreset   = 0;
+int  g_activeColorPreset = 0;
+int  g_activeTab         = 0;
 std::map<HWND, std::set<std::string>> g_incompatRes;
 int  currentHz      = 0;
 char configFile[MAX_PATH];
@@ -67,44 +86,4 @@ void DebugLog(const char* format, ...) {
     printf("%s\n", buffer);
 }
 
-// ---- Admin check ----
 
-bool IsRunAsAdmin() {
-    BOOL isAdmin = FALSE;
-    PSID adminGroup = NULL;
-    SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
-    if (AllocateAndInitializeSid(&NtAuthority, 2,
-            SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS,
-            0, 0, 0, 0, 0, 0, &adminGroup)) {
-        CheckTokenMembership(NULL, adminGroup, &isAdmin);
-        FreeSid(adminGroup);
-    }
-    return isAdmin == TRUE;
-}
-
-// ---- Dark-mode dialog proc (used for any secondary dialogs) ----
-
-LRESULT CALLBACK CustomDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    switch (msg) {
-        case WM_CTLCOLORSTATIC: {
-            HDC hdc = (HDC)wParam;
-            SetTextColor(hdc, RGB(220, 220, 220));
-            SetBkColor(hdc, RGB(32, 32, 32));
-            return (INT_PTR)hBrushDarkBg;
-        }
-        case WM_CTLCOLOREDIT: {
-            HDC hdc = (HDC)wParam;
-            SetTextColor(hdc, RGB(220, 220, 220));
-            SetBkColor(hdc, RGB(45, 45, 45));
-            return (INT_PTR)hBrushEditBg;
-        }
-        case WM_ERASEBKGND: {
-            HDC hdc = (HDC)wParam;
-            RECT rc;
-            GetClientRect(hwnd, &rc);
-            FillRect(hdc, &rc, hBrushDarkBg);
-            return 1;
-        }
-    }
-    return DefWindowProc(hwnd, msg, wParam, lParam);
-}

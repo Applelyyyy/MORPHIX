@@ -48,7 +48,7 @@ void PopulateResolutions(HWND hCombo, int monitorIndex) {
 
     SendMessage(hCombo, CB_RESETCONTENT, 0, 0);
 
-    std::map<std::string, int>           resMaxHz;
+    std::unordered_set<std::string>         seen;
     std::vector<std::pair<int, std::string>> resList;
 
     // Merge standard and raw-driver modes; skip tiny resolutions
@@ -56,16 +56,8 @@ void PopulateResolutions(HWND hCombo, int monitorIndex) {
         if (d.dmPelsWidth < 640 || d.dmPelsHeight < 480) return;
         char key[64];
         sprintf(key, "%dx%d", d.dmPelsWidth, d.dmPelsHeight);
-        std::string k(key);
-
-        // Track highest refresh rate seen for this resolution
-        if (resMaxHz.find(k) == resMaxHz.end() || d.dmDisplayFrequency > resMaxHz[k])
-            resMaxHz[k] = d.dmDisplayFrequency;
-
-        // Add to list if not already present
-        for (const auto& r : resList)
-            if (r.second == k) return;
-        resList.push_back({ (int)(d.dmPelsWidth * 10000 + d.dmPelsHeight), k });
+        if (!seen.insert(key).second) return;  // O(1) duplicate check
+        resList.push_back({ (int)(d.dmPelsWidth * 10000 + d.dmPelsHeight), key });
     };
 
     DEVMODE dm = {};

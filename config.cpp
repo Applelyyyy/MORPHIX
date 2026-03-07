@@ -25,6 +25,24 @@ void SaveConfig() {
     sprintf(buf, "%d", normalHotkey);
     WritePrivateProfileStringA("Settings", "Hotkey2", buf, configFile);
 
+    sprintf(buf, "%d", colorHotkey1);
+    WritePrivateProfileStringA("Settings", "ColorHotkey1", buf, configFile);
+
+    sprintf(buf, "%d", colorHotkey2);
+    WritePrivateProfileStringA("Settings", "ColorHotkey2", buf, configFile);
+
+    // Read colors from Edit controls
+    char val[32];
+    GetWindowTextA(hEditGVibrance, val, 32); gameVibrance = atoi(val);
+    if (gameVibrance < 0) gameVibrance = 0; if (gameVibrance > 100) gameVibrance = 100;
+    sprintf(val, "%d", gameVibrance); SetWindowTextA(hEditGVibrance, val);
+    WritePrivateProfileStringA("Color2", "Vibrance", val, configFile);
+
+    GetWindowTextA(hEditNVibrance, val, 32); normalVibrance = atoi(val);
+    if (normalVibrance < 0) normalVibrance = 0; if (normalVibrance > 100) normalVibrance = 100;
+    sprintf(val, "%d", normalVibrance); SetWindowTextA(hEditNVibrance, val);
+    WritePrivateProfileStringA("Color1", "Vibrance", val, configFile);
+
     DebugLog("Config saved to %s", configFile);
 }
 
@@ -72,6 +90,22 @@ void LoadConfig() {
     GetPrivateProfileStringA("Settings", "Hotkey2", "119", buf, sizeof(buf), configFile);
     normalHotkey = atoi(buf);
     SendMessage(hHotkeyNormal, HKM_SETHOTKEY, MAKEWORD(normalHotkey, 0), 0);
+
+    GetPrivateProfileStringA("Settings", "ColorHotkey1", "122", buf, sizeof(buf), configFile);
+    colorHotkey1 = atoi(buf);
+    SendMessage(hHotkeyColor1, HKM_SETHOTKEY, MAKEWORD(colorHotkey1, 0), 0);
+
+    GetPrivateProfileStringA("Settings", "ColorHotkey2", "123", buf, sizeof(buf), configFile);
+    colorHotkey2 = atoi(buf);
+    SendMessage(hHotkeyColor2, HKM_SETHOTKEY, MAKEWORD(colorHotkey2, 0), 0);
+
+    // Color controls
+    char val[32];
+    GetPrivateProfileStringA("Color2", "Vibrance", "50", val, 32, configFile);
+    SetWindowTextA(hEditGVibrance, val); gameVibrance = atoi(val);
+
+    GetPrivateProfileStringA("Color1", "Vibrance", "50", val, 32, configFile);
+    SetWindowTextA(hEditNVibrance, val); normalVibrance = atoi(val);
 
     DebugLog("Config loaded");
 }

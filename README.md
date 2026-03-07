@@ -11,7 +11,7 @@ A lightweight Win32 application for instant resolution switching via global hotk
 - **Auto Refresh Rate** — Always selects the highest available Hz for each resolution
 - **Multi-Monitor Support** — Per-monitor configuration
 - **System Tray** — Runs silently in the background, out of your way
-
+- **Color tab and vibrance control** — Added a second tab (Color) with two independent vibrance presets
 ---
 
 ## Installation
@@ -72,5 +72,5 @@ compile.bat
 - To run on startup, place a shortcut to `MORPHIX.exe` in `shell:startup`
 - If the display gets stuck, press Ctrl + Alt + Shift + R to recover
 - Right-click the tray icon to exit
-- Memory usage: ~3–5 MB at idle
+- Memory usage: ~1–4 MB at idle
 - No external dependencies — single standalone executable
